@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kuis PAI SMP Negeri Kota Demak</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Nunito', system-ui, sans-serif; background:#eef6f1; color:#16352a; }
+  /* Teks Arab: font Amiri, rata kanan, ukuran besar agar harakat terbaca */
+  .arab { font-family:'Amiri','Scheherazade New',serif; direction:rtl; text-align:right; font-size:1.8rem; line-height:2.6rem; background:#f3faf6; border-right:4px solid #1f7a54; padding:.6rem 1rem; border-radius:.5rem; margin:.6rem 0; }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- ============================================================
+  1. KONFIGURASI (edit di sini)
+============================================================ -->
+<script>
+  // Tempel URL Web App Google Apps Script di sini (lihat panduan). Kosongkan jika tidak dipakai.
+  const URL_GOOGLE_SHEETS = "";
+  // Nama sekolah di judul halaman
+  const NAMA_SEKOLAH = "SMP Negeri Kota Demak";
+</script>
+
+<!-- ============================================================
+  2. BANK SOAL
+  Format tiap soal:
+  { q:"Pertanyaan", arab:"teks Arab (boleh dikosongkan: '')",
+    opsi:["A","B","C","D"], kunci:0, bahas:"Penjelasan singkat" }
+  kunci: 0 = A, 1 = B, 2 = C, 3 = D
+  Jumlah soal bebas; nilai dihitung 100 / jumlah soal (50 soal = 2 poin per soal).
+============================================================ -->
+<script>
+const soalKelas7 = [
+  { q:"Asmaul Husna \"Ar-Rahman\" (الرَّحْمٰنُ) memiliki arti ...", arab:"الرَّحْمٰنُ",
+    opsi:["Maha Pengasih","Maha Mengetahui","Maha Melihat","Maha Perkasa"], kunci:0,
+    bahas:"Ar-Rahman berarti Maha Pengasih, yaitu kasih sayang Allah yang meliputi seluruh makhluk di dunia." },
+  { q:"Kandungan utama QS. Al-Ikhlas ayat 1 adalah ...", arab:"قُلْ هُوَ اللّٰهُ اَحَدٌ",
+    opsi:["Allah memiliki anak","Allah Maha Esa","Allah beranak dan diperanakkan","Allah butuh pertolongan"], kunci:1,
+    bahas:"Ayat tersebut berarti \"Katakanlah, Dialah Allah Yang Maha Esa\", menegaskan tauhid." },
+  { q:"Hadis berikut mengajarkan pentingnya ...", arab:"الطُّهُورُ شَطْرُ الْإِيمَانِ",
+    opsi:["Kekayaan","Kebersihan/kesucian","Kekuatan fisik","Kepandaian berbicara"], kunci:1,
+    bahas:"Hadis riwayat Muslim ini berarti \"Kesucian (kebersihan) adalah sebagian dari iman\"." },
+
+  // >>> TEMPEL SOAL KELAS 7 NOMOR 4 - 50 DI BAWAH INI (pisahkan tiap soal dengan koma) <<<
+
+];
+
+const soalKelas8 = [
+  { q:"Menurut QS. Al-Hujurat ayat 13, orang yang paling mulia di sisi Allah adalah ...", arab:"إِنَّ أَكْرَمَكُمْ عِنْدَ اللّٰهِ أَتْقَاكُمْ",
+    opsi:["Yang paling kaya","Yang paling bertakwa","Yang paling tinggi jabatannya","Yang paling banyak keturunannya"], kunci:1,
+    bahas:"Ayat tersebut menegaskan kemuliaan diukur dari ketakwaan, bukan harta, jabatan, atau keturunan." },
+  { q:"Malaikat yang bertugas menyampaikan wahyu kepada para nabi adalah ...", arab:"",
+    opsi:["Mikail","Israfil","Jibril","Izrail"], kunci:2,
+    bahas:"Jibril bertugas menyampaikan wahyu. Mikail membagi rezeki, Israfil meniup sangkakala, Izrail mencabut nyawa." },
+  { q:"Shalat jamak taqdim adalah menggabungkan dua shalat yang dilaksanakan pada waktu ...", arab:"",
+    opsi:["Shalat yang kedua","Shalat yang pertama","Sembarang waktu","Waktu Isya saja"], kunci:1,
+    bahas:"Jamak taqdim dikerjakan pada waktu shalat yang pertama, misalnya Zuhur dan Asar pada waktu Zuhur." },
+
+  // >>> TEMPEL SOAL KELAS 8 NOMOR 4 - 50 DI BAWAH INI <<<
+
+];
+
+const soalKelas9 = [
+  { q:"Pesan QS. Az-Zalzalah ayat 7 adalah ...", arab:"فَمَنْ يَعْمَلْ مِثْقَالَ ذَرَّةٍ خَيْرًا يَرَهٗ",
+    opsi:["Kebaikan sekecil apa pun akan dilihat balasannya","Hanya amal besar yang dihitung","Amal tidak dicatat","Balasan hanya di dunia"], kunci:0,
+    bahas:"Artinya \"Barang siapa mengerjakan kebaikan seberat zarah, dia akan melihat (balasan)nya\". Ini terkait iman kepada hari akhir." },
+  { q:"Ayat berikut menjadi dalil bahwa nasib seseorang dipengaruhi oleh ...", arab:"إِنَّ اللّٰهَ لَا يُغَيِّرُ مَا بِقَوْمٍ حَتّٰى يُغَيِّرُوْا مَا بِأَنْفُسِهِمْ",
+    opsi:["Keberuntungan semata","Usaha manusia itu sendiri","Bintang dan zodiak","Warisan keluarga"], kunci:1,
+    bahas:"QS. Ar-Ra'd ayat 11 menegaskan perubahan keadaan bergantung pada ikhtiar manusia, sesuai konsep takdir muallaq." },
+  { q:"Zakat fitrah wajib ditunaikan paling lambat ...", arab:"",
+    opsi:["Setelah shalat Idul Fitri","Sebelum shalat Idul Fitri","Awal Syawal pekan kedua","Akhir Dzulhijjah"], kunci:1,
+    bahas:"Zakat fitrah ditunaikan sebelum shalat Idul Fitri. Jika sesudahnya, nilainya hanya menjadi sedekah biasa." },
+
+  // >>> TEMPEL SOAL KELAS 9 NOMOR 4 - 50 DI BAWAH INI <<<
+
+];
+
+// Pemetaan pilihan dropdown -> bank soal (jangan diubah)
+const BANK = { "7": soalKelas7, "8": soalKelas8, "9": soalKelas9 };
+const LABEL_KELAS = { "7":"Kelas 7 (Kelas 1)", "8":"Kelas 8 (Kelas 2)", "9":"Kelas 9 (Kelas 3)" };
+</script>
+
+<!-- ============================================================
+  3. TAMPILAN
+============================================================ -->
+<main class="max-w-3xl mx-auto p-4 pb-16">
+
+  <!-- Halaman awal -->
+  <section id="s-awal" class="mt-6">
+    <div class="rounded-2xl bg-emerald-800 text-white p-6 shadow-lg">
+      <p class="arab !bg-transparent !border-0 !text-center !text-3xl !p-0 !m-0" style="text-align:center">بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ</p>
+      <h1 class="text-2xl font-extrabold mt-3 text-center">Kuis Pendidikan Agama Islam</h1>
+      <p class="text-emerald-100 text-center" id="judulSekolah"></p>
+    </div>
+    <div class="bg-white rounded-2xl shadow p-6 mt-4 space-y-4">
+      <div>
+        <label class="font-semibold" for="nama">Nama lengkap</label>
+        <input id="nama" type="text" autocomplete="off" class="w-full mt-1 border border-slate-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-emerald-600">
+      </div>
+      <div>
+        <label class="font-semibold" for="absen">Nomor absen</label>
+        <input id="absen" type="number" min="1" inputmode="numeric" class="w-full mt-1 border border-slate-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-emerald-600">
+      </div>
+      <div>
+        <label class="font-semibold" for="kelas">Tingkat kelas</label>
+        <select id="kelas" class="w-full mt-1 border border-slate-300 rounded-lg p-3 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-600">
+          <option value="">Pilih kelas</option>
+          <option value="7">Kelas 7 (Kelas 1)</option>
+          <option value="8">Kelas 8 (Kelas 2)</option>
+          <option value="9">Kelas 9 (Kelas 3)</option>
+        </select>
+      </div>
+      <button id="btnMulai" disabled class="w-full bg-emerald-700 text-white font-bold rounded-lg p-3 disabled:bg-slate-300 disabled:cursor-not-allowed hover:bg-emerald-800">Mulai Mengerjakan</button>
+    </div>
+  </section>
+
+  <!-- Halaman kuis -->
+  <section id="s-kuis" class="hidden">
+    <div class="sticky top-0 z-10 bg-emerald-800 text-white rounded-b-xl px-4 py-3 shadow">
+      <div class="font-bold" id="idNama"></div>
+      <div class="text-sm text-emerald-100" id="idDetail"></div>
+    </div>
+    <div class="bg-white rounded-2xl shadow p-5 mt-4">
+      <div class="text-sm text-slate-500" id="noSoal"></div>
+      <p class="text-lg font-semibold mt-1" id="teksSoal"></p>
+      <div id="arabSoal"></div>
+      <div id="opsiSoal" class="mt-3 space-y-2"></div>
+      <div class="flex justify-between mt-5 gap-3">
+        <button id="btnPrev" class="px-4 py-2 rounded-lg bg-slate-200 font-semibold disabled:opacity-40">Sebelumnya</button>
+        <button id="btnNext" class="px-4 py-2 rounded-lg bg-emerald-700 text-white font-semibold">Berikutnya</button>
+        <button id="btnSelesai" class="hidden px-4 py-2 rounded-lg bg-sky-700 text-white font-bold">Selesai &amp; Kirim Jawaban</button>
+      </div>
+    </div>
+    <div class="bg-white rounded-2xl shadow p-4 mt-4">
+      <div class="font-semibold mb-2">Navigasi soal <span class="text-sm font-normal text-slate-500" id="progres"></span></div>
+      <div id="navGrid" class="grid grid-cols-5 sm:grid-cols-10 gap-2"></div>
+    </div>
+  </section>
+
+  <!-- Halaman hasil -->
+  <section id="s-hasil" class="hidden mt-6">
+    <div class="rounded-2xl bg-emerald-800 text-white p-6 text-center shadow-lg">
+      <div id="hasilIdentitas" class="text-emerald-100"></div>
+      <div class="text-6xl font-extrabold my-2" id="skor"></div>
+      <div class="text-xl font-bold" id="predikat"></div>
+      <div class="mt-3 flex justify-center gap-6">
+        <div><div class="text-2xl font-bold" id="jmlBenar"></div><div class="text-sm text-emerald-100">Benar</div></div>
+        <div><div class="text-2xl font-bold" id="jmlSalah"></div><div class="text-sm text-emerald-100">Salah</div></div>
+      </div>
+      <p id="statusKirim" class="text-sm text-emerald-100 mt-3"></p>
+    </div>
+    <div class="flex flex-wrap gap-3 mt-4">
+      <button id="btnUnduh" class="bg-sky-700 text-white font-semibold rounded-lg px-4 py-2">Download Rekap Nilai (.xlsx)</button>
+      <button id="btnCsv" class="bg-sky-100 text-sky-900 font-semibold rounded-lg px-4 py-2">Download .csv</button>
+      <button onclick="location.reload()" class="bg-slate-200 font-semibold rounded-lg px-4 py-2">Kembali ke awal</button>
+    </div>
+    <h2 class="text-xl font-extrabold mt-6">Pembahasan</h2>
+    <div id="review" class="space-y-4 mt-3"></div>
+  </section>
+</main>
+
+<!-- ============================================================
+  4. LOGIKA
+============================================================ -->
+<script>
+const $ = id => document.getElementById(id);
+const HURUF = ["A","B","C","D"];
+// Mencegah teks siswa disisipkan sebagai HTML
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let siswa = {}, soal = [], jawab = [], idx = 0, barisTerakhir = null;
+$("judulSekolah").textContent = NAMA_SEKOLAH;
+
+// ---- Formulir: tombol aktif hanya jika semua terisi
+function cekForm() {
+  $("btnMulai").disabled = !($("nama").value.trim() && $("absen").value && $("kelas").value);
+}
+["nama","absen","kelas"].forEach(id => { $(id).addEventListener("input", cekForm); $(id).addEventListener("change", cekForm); });
+
+$("btnMulai").onclick = () => {
+  const k = $("kelas").value;
+  soal = BANK[k];
+  if (!soal.length) return alert("Bank soal kelas ini masih kosong.");
+  siswa = { nama:$("nama").value.trim(), absen:$("absen").value, kelas:LABEL_KELAS[k] };
+  jawab = new Array(soal.length).fill(null);
+  idx = 0;
+  $("idNama").textContent = siswa.nama;
+  $("idDetail").textContent = siswa.kelas + " • No. Absen " + siswa.absen;
+  $("s-awal").classList.add("hidden");
+  $("s-kuis").classList.remove("hidden");
+  window.scrollTo(0,0);
+  tampil();
+};
+
+// ---- Menampilkan satu soal
+function tampil() {
+  const s = soal[idx];
+  $("noSoal").textContent = `Soal ${idx+1} dari ${soal.length}`;
+  $("teksSoal").textContent = s.q;
+  $("arabSoal").innerHTML = s.arab ? `<div class="arab">${esc(s.arab)}</div>` : "";
+  $("opsiSoal").innerHTML = "";
+  s.opsi.forEach((o,i) => {
+    const b = document.createElement("button");
+    const aktif = jawab[idx] === i;
+    b.className = "w-full text-left rounded-lg border p-3 flex gap-3 " +
+      (aktif ? "border-emerald-700 bg-emerald-50 ring-2 ring-emerald-600" : "border-slate-300 hover:bg-slate-50");
+    b.innerHTML = `<span class="font-bold">${HURUF[i]}.</span><span>${esc(o)}</span>`;
+    b.onclick = () => { jawab[idx] = i; tampil(); };
+    $("opsiSoal").appendChild(b);
+  });
+  const akhir = idx === soal.length - 1;
+  $("btnPrev").disabled = idx === 0;
+  $("btnNext").classList.toggle("hidden", akhir);
+  $("btnSelesai").classList.toggle("hidden", !akhir);
+  buatNav();
+}
+
+function buatNav() {
+  $("navGrid").innerHTML = "";
+  soal.forEach((_, i) => {
+    const b = document.createElement("button");
+    const sudah = jawab[i] !== null;
+    b.textContent = i+1;
+    b.className = "rounded-md py-2 text-sm font-bold " +
+      (sudah ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-700") +
+      (i === idx ? " ring-2 ring-offset-1 ring-sky-600" : "");
+    b.onclick = () => { idx = i; tampil(); };
+    $("navGrid").appendChild(b);
+  });
+  $("progres").textContent = `(${jawab.filter(j => j !== null).length}/${soal.length} terjawab)`;
+}
+
+$("btnPrev").onclick = () => { if (idx > 0) { idx--; tampil(); } };
+$("btnNext").onclick = () => { if (idx < soal.length-1) { idx++; tampil(); } };
+
+// ---- Selesai: konfirmasi jika ada yang kosong
+$("btnSelesai").onclick = () => {
+  const kosong = jawab.filter(j => j === null).length;
+  const pesan = kosong ? `Masih ada ${kosong} soal yang belum dijawab. Tetap kirim jawaban?` : "Kirim jawaban sekarang?";
+  if (confirm(pesan)) selesai();
+};
+
+function predikat(n) {
+  if (n >= 90) return "Sangat Baik";
+  if (n >= 75) return "Baik";
+  if (n >= 60) return "Cukup";
+  return "Perlu Bimbingan";
+}
+
+function selesai() {
+  const benar = soal.filter((s,i) => jawab[i] === s.kunci).length;
+  const salah = soal.length - benar;
+  const nilai = Math.round(benar * 100 / soal.length * 10) / 10; // 50 soal => 2 poin/soal
+  barisTerakhir = {
+    "Waktu Selesai": new Date().toLocaleString("id-ID"),
+    "Nama Siswa": siswa.nama, "Kelas": siswa.kelas, "Nomor Absen": Number(siswa.absen),
+    "Jumlah Benar": benar, "Jumlah Salah": salah, "Nilai Akhir": nilai
+  };
+  // Simpan di perangkat ini (untuk rekap Opsi A jika satu laptop dipakai bergantian)
+  try {
+    const arsip = JSON.parse(localStorage.getItem("rekapPAI") || "[]");
+    arsip.push(barisTerakhir);
+    localStorage.setItem("rekapPAI", JSON.stringify(arsip));
+  } catch(e) {}
+  kirimKeSheets(barisTerakhir);
+
+  $("s-kuis").classList.add("hidden");
+  $("s-hasil").classList.remove("hidden");
+  window.scrollTo(0,0);
+  $("hasilIdentitas").textContent = `${siswa.nama} • ${siswa.kelas} • No. ${siswa.absen}`;
+  $("skor").textContent = nilai;
+  $("predikat").textContent = "Predikat: " + predikat(nilai);
+  $("jmlBenar").textContent = benar;
+  $("jmlSalah").textContent = salah;
+  buatReview();
+}
+
+// ---- Pembahasan
+function buatReview() {
+  $("review").innerHTML = soal.map((s,i) => {
+    const pilih = jawab[i], benar = pilih === s.kunci;
+    const opsi = s.opsi.map((o,j) => {
+      let kelas = "border-slate-200";
+      if (j === s.kunci) kelas = "border-emerald-600 bg-emerald-50";
+      else if (j === pilih) kelas = "border-red-500 bg-red-50";
+      return `<div class="border rounded-lg p-2 ${kelas}"><b>${HURUF[j]}.</b> ${esc(o)}</div>`;
+    }).join("");
+    return `<div class="bg-white rounded-2xl shadow p-4 border-l-8 ${benar ? "border-emerald-600" : "border-red-500"}">
+      <div class="font-bold">${i+1}. ${esc(s.q)}</div>
+      ${s.arab ? `<div class="arab">${esc(s.arab)}</div>` : ""}
+      <div class="grid gap-2 mt-2">${opsi}</div>
+      <p class="mt-2 text-sm">Jawabanmu: <b class="${benar ? "text-emerald-700" : "text-red-600"}">${pilih === null ? "Tidak dijawab" : HURUF[pilih]} ${benar ? "(benar)" : "(salah)"}</b> • Kunci: <b>${HURUF[s.kunci]}</b></p>
+      <p class="mt-1 text-sm bg-sky-50 rounded-lg p-2"><b>Pembahasan:</b> ${esc(s.bahas)}</p>
+    </div>`;
+  }).join("");
+}
+
+// ---- Opsi B: kirim otomatis ke Google Sheets
+function kirimKeSheets(baris) {
+  const st = $("statusKirim");
+  if (!URL_GOOGLE_SHEETS) { st.textContent = ""; return; }
+  st.textContent = "Mengirim nilai ke guru...";
+  fetch(URL_GOOGLE_SHEETS, {
+    method: "POST", mode: "no-cors",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(baris)
+  }).then(() => st.textContent = "Nilai sudah terkirim ke guru.")
+    .catch(() => st.textContent = "Nilai belum terkirim. Periksa koneksi internet.");
+}
+
+// ---- Opsi A: unduh rekap (semua hasil yang tersimpan di perangkat ini)
+function dataRekap() {
+  try { return JSON.parse(localStorage.getItem("rekapPAI") || "[]"); } catch(e) { return [barisTerakhir]; }
+}
+$("btnUnduh").onclick = () => {
+  const ws = XLSX.utils.json_to_sheet(dataRekap());
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Rekap Nilai");
+  XLSX.writeFile(wb, "Rekap_Nilai_PAI.xlsx");
+};
+$("btnCsv").onclick = () => {
+  const ws = XLSX.utils.json_to_sheet(dataRekap());
+  const blob = new Blob(["\ufeff" + XLSX.utils.sheet_to_csv(ws)], { type:"text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "Rekap_Nilai_PAI.csv"; a.click();
+};
+</script>
+</body>
+</html>
